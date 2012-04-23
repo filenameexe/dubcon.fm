@@ -1,0 +1,4 @@
+Options +ExecCGI
+AddType text/html py
+AddHandler cgi-script .py
+
