@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Import Python Classes
+import cgi
 import os
 import sys
 import urllib2
@@ -14,24 +15,14 @@ except:
 
 
 # Global variables
+form = cgi.FieldStorage()
 graph_url = 'https://graph.facebook.com/'
-configfile = 'radio.cfg'
-config = False
+feed_id = 136242783083472
 
+# Debug statements
+import cgitb
+cgitb.enable()
 DEBUG = True
-
-def read_config():
-    '''Read configurations from a configuration file.'''
-
-    # Make the config in this method be the same config that's globally accessible
-    global config
-
-    if not os.path.exists(configfile):
-        sys.stderr.write('Copy radio.defaults to radio.cfg and configure.\n')
-        sys.exit(1)
-
-    config = ConfigParser.RawConfigParser()
-    config.read(configfile)
 
 def pretty_print_json(json_input):
     '''Helper method for inspecting json in the command line.'''
@@ -43,15 +34,18 @@ def curl_to_json(URL):
     '''Grab a website's data and convert it to json.'''
 
     request = urllib2.Request(URL)
-    response = urllib2.urlopen(request).read()
+    try:
+        response = urllib2.urlopen(request).read()
+    except urllib2.HTTPError:
+        return
     return json.loads(response)
 
 def get_fb_feed():
     '''Get the Facebook feed using a facebook access token and feed id.'''
     radio_feed_url = '{0}{1}/feed?access_token={2}&format=json&limit=25'.format(
                             graph_url,
-                            config.get('facebook', 'feedid'),
-                            config.get('facebook', 'accesstoken'))
+                            feed_id,
+                            form.getvalue('access_token'))
 
     if DEBUG:
         print 'Curl URL:',radio_feed_url
@@ -103,16 +97,23 @@ def construct_youtube_embed(youtube_ids):
     # Save to file: http://docs.python.org/tutorial/inputoutput.html#reading-and-writing-files
     pass
 
-
-if __name__ == "__main__":
-    read_config()
-
+def main():
     fb_feed = get_fb_feed()
+    if not fb_feed:
+        print "Location: fb_authentication.py\n"
+        return
+
+    print "Content-Type: text/html\n"
+    print fb_feed
+
     if DEBUG:
         pretty_print_json(fb_feed)
 
     youtube_links = extract_youtube_links(fb_feed)
     print youtube_links
+
+if __name__ == "__main__":
+    main()
 
 
 # Future TODO:
