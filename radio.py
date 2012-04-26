@@ -3,6 +3,7 @@
 # Import Python Classes
 import cgi
 import os
+import re
 import shelve
 import sys
 import time
@@ -128,16 +129,77 @@ def extract_youtube_ids(youtube_links):
 def construct_youtube_embed(youtube_ids):
     '''Write the full html embedded code.'''
 
-    # To write
-    # Go to mixfeed.me and right click and view the source.
-    # Towards the bottom you'll see how playlists are formed.
-    # Print this out via python and save it into an html file.
-    # If this method works correctly, then when you open your html page
-    # in a brower you should get a playlist of these songs.
-
     # Using %s or .format() may help: http://stackoverflow.com/a/2550630
-    # Save to file: http://docs.python.org/tutorial/inputoutput.html#reading-and-writing-files
-    pass
+    # http://docs.python.org/tutorial/inputoutput.html
+
+    # Remove this fake list after you understand what's going on
+    youtube_ids = ['unKR9WupoSE', '33kaBjW5QwA', 'EZnf3BGnJoc']
+
+    # This is the url that we will use later when embedding
+    # Here are the full list of parameters:
+    # https://developers.google.com/youtube/player_parameters#Parameters
+    youtube_url = '''
+        http://www.youtube.com/v/{0}?
+            version=3
+            &iv_load_policy=3
+            &showsearch=0
+            &autohide=1
+            &autoplay=1
+            &hd=1
+            &modestbranding=1
+            &playlist={1}
+    '''
+
+    # Make the {0}'s be the first element of youtube_ids
+    # Make the {1}'s be the list from the first element to the last that are
+    # joined together by ,'s
+    youtube_url = youtube_url.format(
+        youtube_ids[0],
+        ','.join(youtube_ids[1:])
+    )
+
+    if DEBUG:
+        print youtube_url
+
+    # Replace all &'s with the correct html encoding
+    youtube_url = re.sub('&', '&amp;', youtube_url)
+
+    # Remove all spaces (since the spaces were only for nicer code)
+    youtube_url = re.sub('\n', '', youtube_url)
+    youtube_url = re.sub(' ', '', youtube_url)
+
+    # Resolution map for how big videos should be to automatically play
+    # at a set resolution
+    # Only one mapping is currently used. The rest will follow.
+    resolution_map = {
+        1080: (1920, 1080 + 30),
+        720: (1280, 720 + 30),
+        480: (720, 480 + 30),
+        360: (480, 360 + 30),
+        240: (350, 240 - 40)
+    }
+
+    # The actual embedding that YouTube provides
+    youtube_embedding = '''
+        <div style="width: {1[0]}px; height: {1[1]}px; margin: 0 auto;">
+            <object width="{1[0]}" height="{1[1]}">
+                <param name="movie" value="{0}"></param>
+                <param name="allowScriptAccess" value="always"></param>
+                <embed type="application/x-shockwave-flash" allowscriptaccess="always"
+                       width="{1[0]}" height="{1[1]}" src="{0}"></embed>
+            </object>
+        </div>
+    '''
+
+    # Hard code the resolution for now
+    # Later we will let the user choose this
+    resolution = 1080
+
+    # Return the youtube embedding where {0}'s replaced by the youtube_url
+    # and {1[0]} read the first number of the resolution map
+    # and {1[1]} read the second number of the resolution map
+    return youtube_embedding.format(youtube_url, resolution_map[resolution])
+
 
 def retrieve_saved_feed(feed_id):
     '''Get the saved feed from a previous connection'''
@@ -201,6 +263,12 @@ def main():
     # Extract the newest time and youtube links
     first_created_time, youtube_links = extract_youtube_links(fb_feed)
 
+    # Extract all the youtube ids from the youtube links
+    youtube_ids = extract_youtube_ids(youtube_links)
+
+    # Print the embedded playlist to the html page
+    print construct_youtube_embed(youtube_ids)
+
     # Save the current feed information to the cache database
     save_feed(feed_id, first_created_time, fb_feed)
 
@@ -214,5 +282,7 @@ if __name__ == "__main__":
 # Future TODO:
 # DONE Page through all the facebook results
 # DONE Setup OAuth?
+# Extract the YouTube IDs
+# Choose different stations
 # Setup CSS
-# Choose stations
+# Remove dead videos
