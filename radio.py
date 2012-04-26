@@ -240,6 +240,9 @@ def save_feed(feed_id, first_created_time, fb_feed):
 def main():
     '''Main method'''
 
+    if DEBUG:
+        print "Content-Type: text/html\n"
+
     # Read and convert the feed_id to a string
     global feed_id
     feed_id = str(feed_id)
@@ -283,6 +286,7 @@ if __name__ == "__main__":
 # DONE Page through all the facebook results
 # DONE Setup OAuth?
 # Extract the YouTube IDs
+# Extract YouTube links from Comments
 # Choose different stations
 # Setup CSS
 # Remove dead videos
